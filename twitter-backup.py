@@ -109,6 +109,36 @@ def replies(args, d):
 
 	return
 
+def messages(args, d):
+	api = twitter.Api(
+			consumer_key=args.consumer_key,
+			consumer_secret=args.consumer_secret,
+			access_token_key=args.access_token_key,
+			access_token_secret=args.access_token_secret)
+
+	sleeptime = 2
+	retrysleeptime = 60
+
+	result = []
+	counter = 0
+	pages = (args.number-1)/20 + 1
+	page = 1
+
+	if args.verbose:
+		print("pages to fetch: %d" % (pages))
+
+	while page <= pages:
+		if args.verbose:
+			print("Fetching next 20 Direct Messages")
+		rf = api.GetDirectMessages(page=page)
+		if len(rf):
+				json = [t.AsJsonString() for t in rf]
+				result.extend(json)
+		page += 1
+
+	store_file(args, d, 'messages', result)
+
+	return
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(
@@ -168,7 +198,7 @@ if __name__ == "__main__":
 	if args.verbose:
 		print("Application arguments:\n%s" % str(vars(args)))
 
-	if not args.timeline and not args.replies:
+	if not args.timeline and not args.replies and not args.messages:
 		print("Specify either timeline or replies")
 		sys.exit(1)
 
@@ -179,6 +209,9 @@ if __name__ == "__main__":
 
 	if args.replies:
 		replies(args, d)
+
+	if args.messages:
+		messages(args, d)
 
 sys.exit(1)
 
