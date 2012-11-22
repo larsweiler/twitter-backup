@@ -78,38 +78,85 @@ def timeline(args, d):
 
 			return
 
+def replies(args, d):
+	api = twitter.Api(
+			consumer_key=args.consumer_key,
+			consumer_secret=args.consumer_secret,
+			access_token_key=args.access_token_key,
+			access_token_secret=args.access_token_secret)
+
+	sleeptime = 2
+	retrysleeptime = 60
+
+	result = []
+	counter = 0
+	pages = (args.number-1)/20 + 1
+	page = 1
+
+	if args.verbose:
+		print("pages to fetch: %d" % (pages))
+
+	while page <= pages:
+		if args.verbose:
+			print("Fetching next 20 Replies")
+		rf = api.GetReplies(page=page)
+		if len(rf):
+				json = [t.AsJsonString() for t in rf]
+				result.extend(json)
+		page += 1
+
+	store_file(args, d, 'replies', result)
+
+	return
+
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(
-			description='Create a personal backup of your Twitter Timeline \
-					replies and direct messages.')
+		description='Create a personal backup of your Twitter Timeline \
+				replies and direct messages.')
 	parser.add_argument('-v', '--verbose',
-			action='store_true',
-			help='Verbose output')
+		action='store_true',
+		help='Verbose output')
 	parser.add_argument('-t', '--timeline',
-			action='store_true',
-			help='Store timeline (maximum of 3200 tweets)')
+		action='store_true',
+		help='Store timeline (maximum of 3200 tweets)')
 	parser.add_argument('-r', '--replies',
-			action='store_true',
-			help='Store replies')
+		action='store_true',
+		help='Store replies')
 	parser.add_argument('-m', '--messages',
-			action='store_true',
-			help='Store direct messages')
+		action='store_true',
+		help='Store direct messages')
 	parser.add_argument('-n,', '--number',
-			metavar='tweets',
-			type=int,
-			default=100,
-			help='Number of Tweets to store (maximum 3200)\
+		metavar='tweets',
+		type=int,
+		default=100,
+		help='Number of Tweets to store (maximum 3200)\
 					[default: %(default)s]')
 	parser.add_argument('-o', '--out',
-			metavar='file',
-			type=str,
-			help='File to store data in, otherwise use\
+		metavar='file',
+		type=str,
+		help='File to store data in, otherwise use\
 					something with username and current timestamp')
+	parser.add_argument('--consumer_key',
+		metavar='key',
+		type=str,
+		help='Consumer Key')
+	parser.add_argument('--consumer_secret',
+		metavar='secret',
+		type=str,
+		help='Consumer Secret')
+	parser.add_argument('--access_token_key',
+		metavar='key',
+		type=str,
+		help='Access Token Key')
+	parser.add_argument('--access_token_secret',
+		metavar='secret',
+		type=str,
+		help='Access Token Secret')
 	parser.add_argument('user',
-			metavar='user',
-			type=str,
-			help='The user to backup')
+		metavar='user',
+		type=str,
+		help='The user to backup')
 
 	if len(sys.argv) == 1:
 		parser.print_help()
@@ -129,6 +176,9 @@ if __name__ == "__main__":
 
 	if args.timeline:
 		timeline(args, d)
+
+	if args.replies:
+		replies(args, d)
 
 sys.exit(1)
 
