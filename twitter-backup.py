@@ -1,22 +1,40 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
+__author__ = "Lars Weiler"
+__copyright__ = "Copyright 2007, The Cogent Project"
+__license__ = "THE NERD-WARE LICENSE (Revision 1)"
+__version__ = "1.1"
+__maintainer__ = "Lars Weiler"
+__email__ = "lars@konvergenzfehler.de"
+
+'''
+-----------------------------------------------------------------------------
+"THE NERD-WARE LICENSE" (Revision 1):
+<lars@konvergenzfehler.de> wrote this file. As long as you retain this notice
+you can do whatever you want with this stuff. If we meet some day, and you
+think this stuff is worth it, you can buy me a beer, mate softdrink or some
+food in return.
+Lars Weiler
+-----------------------------------------------------------------------------
+'''
+
 import argparse
 import sys
 import datetime
 import time
 import twitter
 
-def store_file(args, d, filetype, result):
+def store_file(args, username, d, filetype, result):
 	if args.out:
 		outfile = args.out
 	else:
 		outfile = '%s_%s_%s.json' % (
-				args.user,
+				username,
 				filetype,
 				d.strftime('%Y-%m-%d_%H%M%S'))
-	if args.verbose:
-		print("Writing to file '%s'" % outfile)
+	print("Writing to file '%s'" % outfile)
 	try:
 		f = open(outfile, 'w')
 		f.write(str(result))
@@ -27,7 +45,28 @@ def store_file(args, d, filetype, result):
 	return
 
 def timeline(args, d):
-	api = twitter.Api()
+	if args.consumer_key and args.consumer_secret and args.access_token_key and args.access_token_secret:
+		api = twitter.Api(
+				consumer_key=args.consumer_key,
+				consumer_secret=args.consumer_secret,
+				access_token_key=args.access_token_key,
+				access_token_secret=args.access_token_secret)
+
+		try:
+			user = api.VerifyCredentials()
+		except:
+			print("Can not verify Credentials (API key).")
+	else:
+		api = twitter.Api()
+
+	if args.timeline == 'Username not given':
+		try:
+			username = user.screen_name
+		except:
+			print("No username and no API key given.")
+			sys.exit(1)
+	else:
+		username = args.timeline
 
 	sleeptime = 2
 	retrysleeptime = 60
@@ -36,7 +75,7 @@ def timeline(args, d):
 	counter = 0
 
 	rf = api.GetUserTimeline(
-			screen_name=args.user,
+			screen_name=username,
 			trim_user=True,
 			count=1,
 			page=1,
@@ -45,15 +84,18 @@ def timeline(args, d):
 		max_id = int(rf[-1].id)
 		if args.verbose:
 			print("Startdate: %s" % (rf[-1].created_at))
-		while counter < args.number:
-			print("Next round with new max_id: %d" % (max_id))
+		# ugly hack to start the first round
+		rf.append("")
+		while (counter < args.number) and (len(rf) > 1):
+			if args.verbose:
+				print("Next round with new max_id: %d" % (max_id))
 			if (args.number - counter) > 200:
 				number = 200
 			else:
 				number = (args.number - counter) % 200
 			try:
 				rf = api.GetUserTimeline(
-						screen_name=args.user,
+						screen_name=username,
 						trim_user=True,
 						count=number,
 						max_id=max_id,
@@ -74,9 +116,9 @@ def timeline(args, d):
 				print("Sleeping %d seconds (otherwise Twitter gets angry)" % (sleeptime))
 			time.sleep(sleeptime)
 
-			store_file(args, d, 'timeline', result)
+		store_file(args, username, d, 'timeline', result)
 
-			return
+		return
 
 def replies(args, d):
 	api = twitter.Api(
@@ -84,6 +126,11 @@ def replies(args, d):
 			consumer_secret=args.consumer_secret,
 			access_token_key=args.access_token_key,
 			access_token_secret=args.access_token_secret)
+
+	try:
+		user = api.VerifyCredentials()
+	except:
+		print("Can not verify Credentials (API key).")
 
 	sleeptime = 2
 	retrysleeptime = 60
@@ -105,7 +152,7 @@ def replies(args, d):
 				result.extend(json)
 		page += 1
 
-	store_file(args, d, 'replies', result)
+	store_file(args, user.screen_name, d, 'replies', result)
 
 	return
 
@@ -115,6 +162,11 @@ def messages(args, d):
 			consumer_secret=args.consumer_secret,
 			access_token_key=args.access_token_key,
 			access_token_secret=args.access_token_secret)
+
+	try:
+		user = api.VerifyCredentials()
+	except:
+		print("Can not verify Credentials (API key).")
 
 	sleeptime = 2
 	retrysleeptime = 60
@@ -136,7 +188,7 @@ def messages(args, d):
 				result.extend(json)
 		page += 1
 
-	store_file(args, d, 'messages', result)
+	store_file(args, user.screen_name, d, 'messages', result)
 
 	return
 
@@ -148,8 +200,11 @@ if __name__ == "__main__":
 		action='store_true',
 		help='Verbose output')
 	parser.add_argument('-t', '--timeline',
-		action='store_true',
-		help='Store timeline (maximum of 3200 tweets)')
+		metavar='username',
+		nargs='?',
+		const='Username not given',
+		type=str,
+		help='Store timeline of given username (maximum of 3200 tweets)')
 	parser.add_argument('-r', '--replies',
 		action='store_true',
 		help='Store replies')
@@ -183,24 +238,20 @@ if __name__ == "__main__":
 		metavar='secret',
 		type=str,
 		help='Access Token Secret')
-	parser.add_argument('user',
-		metavar='user',
-		type=str,
-		help='The user to backup')
-
-	if len(sys.argv) == 1:
-		parser.print_help()
-		print("No Username given")
-		sys.exit(1)
 
 	args = parser.parse_args(sys.argv[1:])
 
 	if args.verbose:
 		print("Application arguments:\n%s" % str(vars(args)))
 
-	if not args.timeline and not args.replies and not args.messages:
-		print("Specify either timeline or replies")
+	if len(sys.argv) == 1 or not (args.timeline or args.replies or args.messages):
+		parser.print_help()
+		print("Specify an action (-t, -r or -m)")
 		sys.exit(1)
+
+	if (args.replies or args.messages) and not (args.consumer_key and args.consumer_secret and args.access_token_key and args.access_token_secret):
+			print("You need an API key for replies or direct messages")
+			sys.exit(1)
 
 	d = datetime.datetime.today()
 
