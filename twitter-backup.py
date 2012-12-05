@@ -4,7 +4,7 @@
 
 __author__ = "Lars Weiler"
 __license__ = "THE NERD-WARE LICENSE (Revision 1)"
-__version__ = "1.1"
+__version__ = "1.2"
 __maintainer__ = "Lars Weiler"
 __email__ = "lars@konvergenzfehler.de"
 
@@ -43,7 +43,7 @@ def store_file(args, username, d, filetype, result):
 
 	return
 
-def timeline(args, d):
+def api_verify(args):
 	if args.consumer_key and args.consumer_secret and args.access_token_key and args.access_token_secret:
 		api = twitter.Api(
 				consumer_key=args.consumer_key,
@@ -55,8 +55,15 @@ def timeline(args, d):
 			user = api.VerifyCredentials()
 		except:
 			print("Can not verify Credentials (API key).")
+			user = None
 	else:
 		api = twitter.Api()
+
+	return (api, user)
+
+
+def timeline(args, d):
+	(api, user) = api_verify(args)
 
 	if args.timeline == 'Username not given':
 		try:
@@ -120,16 +127,7 @@ def timeline(args, d):
 		return
 
 def replies(args, d):
-	api = twitter.Api(
-			consumer_key=args.consumer_key,
-			consumer_secret=args.consumer_secret,
-			access_token_key=args.access_token_key,
-			access_token_secret=args.access_token_secret)
-
-	try:
-		user = api.VerifyCredentials()
-	except:
-		print("Can not verify Credentials (API key).")
+	(api, user) = api_verify(args)
 
 	sleeptime = 2
 	retrysleeptime = 60
@@ -156,16 +154,7 @@ def replies(args, d):
 	return
 
 def messages(args, d):
-	api = twitter.Api(
-			consumer_key=args.consumer_key,
-			consumer_secret=args.consumer_secret,
-			access_token_key=args.access_token_key,
-			access_token_secret=args.access_token_secret)
-
-	try:
-		user = api.VerifyCredentials()
-	except:
-		print("Can not verify Credentials (API key).")
+	(api, user) = api_verify(args)
 
 	sleeptime = 2
 	retrysleeptime = 60
