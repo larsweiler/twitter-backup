@@ -142,10 +142,12 @@ def get_pages(args, d, itemtype):
 	while page <= pages:
 		if args.verbose:
 			print("Fetching next 20 Items")
-		if itemtype == "replies":
+		if itemtype == 'replies':
 			rf = api.GetReplies(page=page)
-		elif itemtype == "messages":
+		elif itemtype == 'messages':
 			rf = api.GetDirectMessages(page=page)
+		elif itemtype == 'favs':
+			rf = api.GetFavorites(page=page)
 		if len(rf):
 				json = [t.AsJsonString() for t in rf]
 				result.extend(json)
@@ -175,7 +177,10 @@ if __name__ == "__main__":
 	parser.add_argument('-m', '--messages',
 		action='store_true',
 		help='Store direct messages')
-	parser.add_argument('-n,', '--number',
+	parser.add_argument('-f', '--favs',
+		action='store_true',
+		help='Store Favorites')
+	parser.add_argument('-n', '--number',
 		metavar='tweets',
 		type=int,
 		default=100,
@@ -208,12 +213,22 @@ if __name__ == "__main__":
 	if args.verbose:
 		print("Application arguments:\n%s" % str(vars(args)))
 
-	if len(sys.argv) == 1 or not (args.timeline or args.replies or args.messages):
+	if (len(sys.argv) == 1
+			or not (args.timeline
+				or args.replies
+				or args.messages
+				or args.favs)):
 		parser.print_help()
-		print("Specify an action (-t, -r or -m)")
+		print("Specify at least one action (-t, -r, -m or -f)")
 		sys.exit(1)
 
-	if (args.replies or args.messages) and not (args.consumer_key and args.consumer_secret and args.access_token_key and args.access_token_secret):
+	if ((args.replies
+		or args.messages
+		or args.favs)
+			and not (args.consumer_key
+				and args.consumer_secret
+				and args.access_token_key
+				and args.access_token_secret)):
 			print("You need an API key for replies or direct messages")
 			sys.exit(1)
 
@@ -227,6 +242,9 @@ if __name__ == "__main__":
 
 	if args.messages:
 		get_pages(args, d, 'messages')
+
+	if args.favs:
+		get_pages(args, d, 'favs')
 
 sys.exit(1)
 

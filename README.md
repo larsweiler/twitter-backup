@@ -24,7 +24,7 @@ Usage
 
 Whitout any option, some usage information is displayed:
 
-	usage: twitter-backup.py [-h] [-v] [-t [username]] [-r] [-m] [-n, tweets]
+	usage: twitter-backup.py [-h] [-v] [-t [username]] [-r] [-m] [-f] [-n tweets]
 	                         [-o file] [--consumer_key key]
 	                         [--consumer_secret secret] [--access_token_key key]
 	                         [--access_token_secret secret]
@@ -39,7 +39,8 @@ Whitout any option, some usage information is displayed:
 	                        tweets)
 	  -r, --replies         Store replies
 	  -m, --messages        Store direct messages
-	  -n, tweets, --number tweets
+	  -f, --favs            Store Favorites
+	  -n tweets, --number tweets
 	                        Number of Tweets to store (maximum 3200) [default:
 	                        100]
 	  -o file, --out file   File to store data in, otherwise use something with
@@ -51,11 +52,11 @@ Whitout any option, some usage information is displayed:
 	                        Access Token Key
 	  --access_token_secret secret
 	                        Access Token Secret
-	Specify an action (-t, -r or -m)
+	Specify at least one action (-t, -r, -m or -f)
 
-Either **timeline** (`-t`), **replies** (`-r`) or **messages** (`-m`) needs to be specified.  With *timeline* an optional username can be specified, to store the Tweets of this user.  If an API key was given, but no username, the Tweets of the API key owner will be stored.
+Either **timeline** (`-t`), **replies** (`-r`), **messages** (`-m`) or **favs** (`-f`) needs to be specified.  With *timeline* an optional username can be specified, to store the Tweets of this user.  If an API key was given, but no username, the Tweets of the API key owner will be stored.
 
-For the usage with an API-key all four parameters are required.  The information can be found on the site where the API keys has been created.  There is no option yet to read this from a config file.
+For the usage with an API-key all four parameters (`--consumer_key`, `--consumer_secret`, `--access_token_key`, `--access_token_secret`) are required.  The information can be found on the site where the API keys has been created.  There is no option yet to read this from a config file.
 
 Example
 -------
@@ -81,4 +82,8 @@ Download direct messages to and from the API key owner:
 
 	$ twitter-backup.py --consumer_key [consumer key] --consumer_secret [consumer secret] --access_token_key [access token key] --access_token_secret [access token secret] -m
 
+Download favorites the API key owner made:
 
+	$ twitter-backup.py --consumer_key [consumer key] --consumer_secret [consumer secret] --access_token_key [access token key] --access_token_secret [access token secret] -f
+
+The options can be combined, so that multiple files will be written.
