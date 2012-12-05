@@ -3,7 +3,6 @@
 
 
 __author__ = "Lars Weiler"
-__copyright__ = "Copyright 2007, The Cogent Project"
 __license__ = "THE NERD-WARE LICENSE (Revision 1)"
 __version__ = "1.1"
 __maintainer__ = "Lars Weiler"
