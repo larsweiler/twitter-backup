@@ -25,7 +25,7 @@ Usage
 Whitout any option, some usage information is displayed:
 
 	usage: twitter-backup.py [-h] [-v] [-t [username]] [-r] [-m] [-f] [-n tweets]
-	                         [-o file] [--consumer_key key]
+	                         [-o file] [-c file] [--consumer_key key]
 	                         [--consumer_secret secret] [--access_token_key key]
 	                         [--access_token_secret secret]
 	
@@ -45,6 +45,9 @@ Whitout any option, some usage information is displayed:
 	                        100]
 	  -o file, --out file   File to store data in, otherwise use something with
 	                        username and current timestamp
+	  -c file, --config file
+	                        Path to configfile [default:
+	                        /Users/lars/.twitter_backup.cfg]
 	  --consumer_key key    Consumer Key
 	  --consumer_secret secret
 	                        Consumer Secret
@@ -56,7 +59,7 @@ Whitout any option, some usage information is displayed:
 
 Either **timeline** (`-t`), **replies** (`-r`), **messages** (`-m`) or **favs** (`-f`) needs to be specified.  With *timeline* an optional username can be specified, to store the Tweets of this user.  If an API key was given, but no username, the Tweets of the API key owner will be stored.
 
-For the usage with an API-key all four parameters (`--consumer_key`, `--consumer_secret`, `--access_token_key`, `--access_token_secret`) are required.  The information can be found on the site where the API keys has been created.  There is no option yet to read this from a config file.
+For the usage with an API key all four parameters (`--consumer_key`, `--consumer_secret`, `--access_token_key`, `--access_token_secret`) are required.  The information can be found on the site where the API keys has been created.  You can also store these parameters in a config file (see below).
 
 Example
 -------
@@ -87,3 +90,19 @@ Download favorites the API key owner made:
 	$ twitter-backup.py --consumer_key [consumer key] --consumer_secret [consumer secret] --access_token_key [access token key] --access_token_secret [access token secret] -f
 
 The options can be combined, so that multiple files will be written.
+
+Config File
+-----------
+
+API key parameters can be stored in a config file.  The default file location is `~/.twitter_backup.cfg`, but any other file can be given with the `--config` (`-c`) parameter.
+
+Config file layout:
+
+	[API]
+	consumer_key = consumer key
+	consumer_secret = consumer secret
+	access_token_key = access token key
+	access_token_secret = access token secret
+
+Put the keys and secrets at the correct place.  There is no need for quotes or parentheses.  There is a sample file in this repository.
+

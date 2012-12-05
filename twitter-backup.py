@@ -4,7 +4,7 @@
 
 __author__ = "Lars Weiler"
 __license__ = "THE NERD-WARE LICENSE (Revision 1)"
-__version__ = "1.2"
+__version__ = "1.3"
 __maintainer__ = "Lars Weiler"
 __email__ = "lars@konvergenzfehler.de"
 
@@ -20,8 +20,10 @@ Lars Weiler
 '''
 
 import argparse
-import sys
+import ConfigParser
 import datetime
+import os
+import sys
 import time
 import twitter
 
@@ -50,14 +52,25 @@ def api_verify(args):
 				consumer_secret=args.consumer_secret,
 				access_token_key=args.access_token_key,
 				access_token_secret=args.access_token_secret)
-
-		try:
-			user = api.VerifyCredentials()
-		except:
-			print("Can not verify Credentials (API key).")
-			user = None
+	elif os.path.exists(args.config):
+		cf = ConfigParser.RawConfigParser()
+		cf.read(args.config)
+		if args.verbose:
+			print("API key from config file '%s':" % (args.config))
+			print(cf.items('API'))
+		api = twitter.Api(
+				consumer_key=cf.get('API', 'consumer_key'),
+				consumer_secret=cf.get('API', 'consumer_secret'),
+				access_token_key=cf.get('API', 'access_token_key'),
+				access_token_secret=cf.get('API', 'access_token_secret'))
 	else:
 		api = twitter.Api()
+
+	try:
+		user = api.VerifyCredentials()
+	except:
+		print("Can not verify Credentials (API key).")
+		user = None
 
 	return (api, user)
 
@@ -77,21 +90,31 @@ def timeline(args, d):
 	sleeptime = 2
 	retrysleeptime = 60
 
+	# JSON object with all fetched Tweets
 	result = []
 	counter = 0
 
-	rf = api.GetUserTimeline(
-			screen_name=username,
-			trim_user=True,
-			count=1,
-			page=1,
-			include_rts=1)
+	try:
+		# Try to fetch one Tweet, so that the Tweet-ID can be set
+		rf = api.GetUserTimeline(
+				screen_name=username,
+				trim_user=True,
+				count=1,
+				page=1,
+				include_rts=1)
+	except twitter.TwitterError:
+		print("Check your API key")
+		sys.exit(1)
+
+	# If the Tweet could be fetched, resume fetching
 	if len(rf):
+		# Set the Tweet-ID of the fetched Tweet in max_id; needed for walking through pages
 		max_id = int(rf[-1].id)
 		if args.verbose:
 			print("Startdate: %s" % (rf[-1].created_at))
 		# ugly hack to start the first round
 		rf.append("")
+		# Now walk through pages until number of Tweets is reached or no Updates available (1 Tweet returned)
 		while (counter < args.number) and (len(rf) > 1):
 			if args.verbose:
 				print("Next round with new max_id: %d" % (max_id))
@@ -116,12 +139,14 @@ def timeline(args, d):
 				print("Results: %d ; Total: %d" % (len(rf), counter))
 			json = [t.AsJsonString() for t in rf]
 			result.extend(json)
+			# Store the new max_id for the last fetched Tweet
 			max_id = int(rf[-1].id)
 			if args.verbose:
 				print("Last date: %s" % (rf[-1].created_at))
 				print("Sleeping %d seconds (otherwise Twitter gets angry)" % (sleeptime))
 			time.sleep(sleeptime)
 
+		# Finally, store all fetched Tweets
 		store_file(args, username, d, 'timeline', result)
 
 		return
@@ -132,6 +157,7 @@ def get_pages(args, d, itemtype):
 	sleeptime = 2
 	retrysleeptime = 60
 
+	# JSON object with all fetched Tweets
 	result = []
 	counter = 0
 	pages = (args.number-1)/20 + 1
@@ -141,17 +167,33 @@ def get_pages(args, d, itemtype):
 		print("pages to fetch: %d" % (pages))
 	while page <= pages:
 		if args.verbose:
-			print("Fetching next 20 Items")
+			print("Fetching next 20 %s" % (itemtype))
 		if itemtype == 'replies':
-			rf = api.GetReplies(page=page)
+			try:
+				rf = api.GetReplies(page=page)
+			except twitter.TwitterError:
+				print("Check your API key")
+				sys.exit(1)
 		elif itemtype == 'messages':
-			rf = api.GetDirectMessages(page=page)
+			try:
+				rf = api.GetDirectMessages(page=page)
+			except twitter.TwitterError:
+				print("Check your API key")
+				sys.exit(1)
 		elif itemtype == 'favs':
-			rf = api.GetFavorites(page=page)
+			try:
+				rf = api.GetFavorites(page=page)
+			except twitter.TwitterError:
+				print("Check your API key")
+				sys.exit(1)
 		if len(rf):
 				json = [t.AsJsonString() for t in rf]
 				result.extend(json)
 		page += 1
+		if args.verbose:
+			print("Last date: %s" % (rf[-1].created_at))
+			print("Sleeping %d seconds (otherwise Twitter gets angry)" % (sleeptime))
+		time.sleep(sleeptime)
 
 	store_file(args, user.screen_name, d, itemtype, result)
 
@@ -191,6 +233,11 @@ if __name__ == "__main__":
 		type=str,
 		help='File to store data in, otherwise use\
 					something with username and current timestamp')
+	parser.add_argument('-c', '--config',
+		metavar='file',
+		type=str,
+		default=os.path.expanduser('~/.twitter_backup.cfg'),
+		help='Path to configfile [default: %(default)s]')
 	parser.add_argument('--consumer_key',
 		metavar='key',
 		type=str,
@@ -221,16 +268,6 @@ if __name__ == "__main__":
 		parser.print_help()
 		print("Specify at least one action (-t, -r, -m or -f)")
 		sys.exit(1)
-
-	if ((args.replies
-		or args.messages
-		or args.favs)
-			and not (args.consumer_key
-				and args.consumer_secret
-				and args.access_token_key
-				and args.access_token_secret)):
-			print("You need an API key for replies or direct messages")
-			sys.exit(1)
 
 	d = datetime.datetime.today()
 
