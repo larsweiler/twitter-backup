@@ -126,7 +126,7 @@ def timeline(args, d):
 
 		return
 
-def replies(args, d):
+def get_pages(args, d, itemtype):
 	(api, user) = api_verify(args)
 
 	sleeptime = 2
@@ -139,46 +139,22 @@ def replies(args, d):
 
 	if args.verbose:
 		print("pages to fetch: %d" % (pages))
-
 	while page <= pages:
 		if args.verbose:
-			print("Fetching next 20 Replies")
-		rf = api.GetReplies(page=page)
+			print("Fetching next 20 Items")
+		if itemtype == "replies":
+			rf = api.GetReplies(page=page)
+		elif itemtype == "messages":
+			rf = api.GetDirectMessages(page=page)
 		if len(rf):
 				json = [t.AsJsonString() for t in rf]
 				result.extend(json)
 		page += 1
 
-	store_file(args, user.screen_name, d, 'replies', result)
+	store_file(args, user.screen_name, d, itemtype, result)
 
 	return
 
-def messages(args, d):
-	(api, user) = api_verify(args)
-
-	sleeptime = 2
-	retrysleeptime = 60
-
-	result = []
-	counter = 0
-	pages = (args.number-1)/20 + 1
-	page = 1
-
-	if args.verbose:
-		print("pages to fetch: %d" % (pages))
-
-	while page <= pages:
-		if args.verbose:
-			print("Fetching next 20 Direct Messages")
-		rf = api.GetDirectMessages(page=page)
-		if len(rf):
-				json = [t.AsJsonString() for t in rf]
-				result.extend(json)
-		page += 1
-
-	store_file(args, user.screen_name, d, 'messages', result)
-
-	return
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(
@@ -247,10 +223,10 @@ if __name__ == "__main__":
 		timeline(args, d)
 
 	if args.replies:
-		replies(args, d)
+		get_pages(args, d, 'replies')
 
 	if args.messages:
-		messages(args, d)
+		get_pages(args, d, 'messages')
 
 sys.exit(1)
 
